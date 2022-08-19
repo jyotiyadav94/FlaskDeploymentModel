@@ -18,7 +18,7 @@ if os.path.exists(dirpath) and os.path.isdir(dirpath):
     shutil.rmtree(dirpath)
 os.mkdir("./temp")
 
-model = tf.keras.models.load_model('./saved_model')
+model = tf.keras.models.load_model('FlaskDeploymentModel\\saved_model')
 
 # given predicted boxes approximate the predicted rectangles
 def fil_approx_boxes(img):
@@ -27,7 +27,6 @@ def fil_approx_boxes(img):
     img = cv2.medianBlur(img,5)
     img = cv2.GaussianBlur(img,(13,13),0)
     img = cv2.threshold(img, 254, 255, cv2.THRESH_BINARY)[1]
-
     _, threshold = cv2.threshold(img, 254, 255, cv2.THRESH_BINARY_INV)
     contours,_ = cv2.findContours(threshold, cv2.RETR_TREE , cv2.CHAIN_APPROX_SIMPLE)
     for cnt in contours:
@@ -35,7 +34,6 @@ def fil_approx_boxes(img):
         if x==0 or y==0:
             continue
         cv2.rectangle(img,(x,y),(x+w,y+h),(255,255,255),-1)
-
     img = cv2.GaussianBlur(img,(13,13),0)
     img = cv2.threshold(img, 254, 255, cv2.THRESH_BINARY)[1]
     return img
@@ -73,16 +71,13 @@ def extract_text1(img_path="temp/final_masked.png"):
     im=image_cv.copy()
     horiz_boxes=[]
     vert_boxes=[]
-
     for box in boxes:
         x_h,x_v=0,int(box[0][0])
         y_h,y_v=int(box[0][1]),0
         width_h,width_v=image_width,int(box[2][0]-box[0][0])
         height_h,height_v=int(box[2][1]-box[0][1]),image_height
-
         horiz_boxes.append([x_h,y_h,x_h+width_h,y_h+height_h])
         vert_boxes.append([x_v,y_v,x_v+width_v,y_v+height_v])
-
         cv2.rectangle(im,(x_h,y_h),(x_h+width_h,y_h+height_h),(255,255,0),1)
         cv2.rectangle(im,(x_v,y_v),(x_v+width_v,y_v+height_v),(255,255,0),1)
     import tensorflow as tf
@@ -95,7 +90,6 @@ def extract_text1(img_path="temp/final_masked.png"):
     import numpy as np
     horiz_lines=np.sort(np.array(horiz_out))
     in_nms=image_cv.copy()
-
     for val in horiz_lines:
       cv2.rectangle(in_nms,(int(horiz_boxes[val][0]),int(horiz_boxes[val][1])),(int(horiz_boxes[val][2]),int(horiz_boxes[val][3])),(0,0,255),1)
     vert_out=tf.image.non_max_suppression(vert_boxes,
@@ -104,30 +98,21 @@ def extract_text1(img_path="temp/final_masked.png"):
                                       iou_threshold=0.1,
                                       score_threshold=float('-inf'),
                                       name=None)
-
     vert_lines=np.sort(np.array(vert_out))
-
-
     for val in vert_lines:
         cv2.rectangle(in_nms,(int(vert_boxes[val][0]),int(vert_boxes[val][1])),(int(vert_boxes[val][2]),int(vert_boxes[val][3])),(0,0,255),1)
     out_array=[["" for i in range(len(vert_lines))] for j in range(len(horiz_lines))]
-
     unordered_boxes=[]
-
     for i in vert_lines:
         unordered_boxes.append(vert_boxes[i][0])
-
     ordered_boxes=np.argsort(unordered_boxes)
-
     for i in range(len(horiz_lines)):
       for j in range(len(vert_lines)):
         resultant=intersection(horiz_boxes[horiz_lines[i]],vert_boxes[vert_lines[ordered_boxes[j]]])
-
         for b in range(len(boxes)):
             the_box=[boxes[b][0][0],boxes[b][0][1],boxes[b][2][0],boxes[b][2][1]]
             if (iou(resultant,the_box)>0.1):
                 out_array[i][j]=texts[b]
-
     import pandas as pd
     df=pd.DataFrame(out_array)
     return df
@@ -148,14 +133,12 @@ def predict_and_extract(img_path):
   image = tf.io.read_file(img_path)
   org_image = tf.image.decode_image(image, channels=3)
   h,w = org_image.shape[0],org_image.shape[1]
-
   image = tf.image.resize(org_image, [800, 800])
   pred_table, pred_col = predict_table_masks(image)
   tab = np.where(pred_table == 0,0,1)
   mask = np.expand_dims(tab,axis=2)
   mask = np.concatenate((mask,mask,mask),axis=2)
   cv2.imwrite("temp/mask.png",mask)
-
   mask = cv2.resize(cv2.imread("temp/mask.png"), (w,h), interpolation = cv2.INTER_AREA)
   masked_img= org_image.numpy() * mask
   cv2.imwrite("temp/final_masked.png",masked_img)
