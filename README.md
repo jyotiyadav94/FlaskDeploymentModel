@@ -6,3 +6,6 @@ Steps to run the flask Application
 
 
 Note: To install Cuda ,Cudnn & tensorflow  - https://www.youtube.com/watch?v=hHWkvEcDBO0&t=180s
+
+
+Extract Tables from PDF and convert to Excel sheet with Paddle OCR text detection and recognition.- https://www.youtube.com/watch?v=HZh31OGiQRQ&ab_channel=Neuralearn
